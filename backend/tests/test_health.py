@@ -1,0 +1,21 @@
+
+from fastapi.testclient import TestClient
+from main import app
+
+client = TestClient(app)
+
+
+def test_root_endpoint():
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert response.json()["product"] == "SentinelKey"
+    assert response.json()["version"] == "0.1.0"
+
+
+def test_health_endpoint():
+    response = client.get("/health/live")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+    assert response.json()["service"] == "sentinelkey-api"

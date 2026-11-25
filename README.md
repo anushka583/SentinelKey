@@ -45,5 +45,5 @@ Status: Initial setup / Under Development
 SentinelKey is a credit-based group project made to enhance Technical Skills in the area of cybersecurity. It is not affiliated with or endorsed by CompTIA. All security testing is intended for authorised, isolated lab environments.
 
 ## Created By:
-- Anushka Sarkar CSE-Cyber Security Sec: BA
+- Anushka Sarkar CSE-Cyber Security Sec : BA
 - Sangana Chamundeswari CSE-Cyber Security Sec : BA
