@@ -3,6 +3,7 @@ from sqlalchemy.exc import IntegrityError
 import pytest
 
 from app.models.asset import Asset
+from app.models.alert import Alert
 from app.models.audit_event import AuditEvent
 from app.models.identity import Identity
 from app.models.security_event import SecurityEvent
@@ -17,9 +18,14 @@ def test_database_connection(db_session):
 def test_table_creation(db_engine):
     inspector = inspect(db_engine)
     table_names = set(inspector.get_table_names())
-    assert {"tenants", "identities", "assets", "security_events", "audit_events"}.issubset(
-        table_names
-    )
+    assert {
+        "tenants",
+        "identities",
+        "assets",
+        "security_events",
+        "audit_events",
+        "alerts",
+    }.issubset(table_names)
 
 
 def test_tenant_creation(db_session):
@@ -158,8 +164,13 @@ def test_existing_root_and_liveness_endpoints(client):
     assert health_response.json()["status"] == "healthy"
     assert health_response.json()["service"] == "sentinelkey-api"
 
-def test_tenant_create_endpoint(client):
-    response = client.post("/api/v1/tenants", json={"name": "Acme Corp", "slug": "acme-corp"})
+def test_tenant_create_endpoint(client, create_identity, auth_headers):
+    admin = create_identity(role="platform_admin")
+    response = client.post(
+        "/api/v1/tenants",
+        json={"name": "Acme Corp", "slug": "acme-corp"},
+        headers=auth_headers(admin),
+    )
 
     assert response.status_code == 201
     body = response.json()
@@ -168,18 +179,31 @@ def test_tenant_create_endpoint(client):
     assert "id" in body
 
 
-def test_duplicate_tenant_slug_rejected_by_api(client):
+def test_duplicate_tenant_slug_rejected_by_api(client, create_identity, auth_headers):
+    admin = create_identity(role="platform_admin")
     payload = {"name": "Acme Corp", "slug": "acme-corp"}
-    first = client.post("/api/v1/tenants", json=payload)
-    second = client.post("/api/v1/tenants", json={"name": "Acme Two", "slug": "acme-corp"})
+    headers = auth_headers(admin)
+    first = client.post("/api/v1/tenants", json=payload, headers=headers)
+    second = client.post(
+        "/api/v1/tenants",
+        json={"name": "Acme Two", "slug": "acme-corp"},
+        headers=headers,
+    )
 
     assert first.status_code == 201
     assert second.status_code == 409
 
 
-def test_list_endpoints_return_empty_collections(client):
-    assert client.get("/api/v1/tenants").json() == []
-    assert client.get("/api/v1/identities").json() == []
-    assert client.get("/api/v1/assets").json() == []
-    assert client.get("/api/v1/security-events").json() == []
-    assert client.get("/api/v1/audit-events").json() == []
+def test_list_endpoints_are_authenticated_and_tenant_scoped(
+    client, create_identity, auth_headers
+):
+    identity = create_identity()
+    headers = auth_headers(identity)
+
+    tenants = client.get("/api/v1/tenants", headers=headers).json()
+    identities = client.get("/api/v1/identities", headers=headers).json()
+    assert [tenant["id"] for tenant in tenants] == [identity.tenant_id]
+    assert [item["id"] for item in identities] == [identity.id]
+    assert client.get("/api/v1/assets", headers=headers).json() == []
+    assert client.get("/api/v1/security-events", headers=headers).json() == []
+    assert client.get("/api/v1/audit-events", headers=headers).json() == []
