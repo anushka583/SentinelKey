@@ -39,6 +39,24 @@ Status: Initial setup / Under Development
 
 **Individual modules will be implemented, tested and integrated incrementally.**
 
+## Frontend foundation
+
+The React, TypeScript, Vite, Tailwind CSS, and React Router frontend is in
+`frontend/`. Start the FastAPI backend on `127.0.0.1:8000`, then run the
+frontend from its directory:
+
+```powershell
+npm install
+npm run dev
+```
+
+Vite proxies `/api` requests to the local backend. The Phase 1 screens are
+navigation placeholders; no security data is mocked. There is no login API:
+generate a short-lived development token with the backend CLI and paste it into
+the frontend token-entry form. The token exists in browser memory only and is
+cleared on sign out or page reload. See `frontend/README.md` for build and test
+commands.
+
 ## Local API authentication
 
 The API uses signed bearer tokens for protected routes. Tenant, role, and active
